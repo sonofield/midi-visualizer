@@ -133,5 +133,6 @@ export class CircleService {
 		const degree = DegreeHelper.getDegreeByIndexCOF(index);
 		this.r!.setBooleanStateAtPath('isActive', value, `Active ${degree.name}`);
 		this.r!.setBooleanStateAtPath('isActive', value, `Num ${degree.name}`);
+		this.r!.setBooleanStateAtPath('isSelected', value, `Nip ${degree.name}`);
 	};
 }
