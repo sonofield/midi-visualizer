@@ -1,0 +1,16 @@
+---
+description: This rule helps know how you should work with me
+globs: 
+alwaysApply: true
+---
+
+# How to Operate
+
+## When writing code
+- Be consise.
+- Be clear and prefer readability.
+- Do not suggest installing new packages unless I specify so in my prompts.
+
+## Explaining things
+- Always explain why you decided to do what you decided to do.
+- Explain like I am an experienced developer.

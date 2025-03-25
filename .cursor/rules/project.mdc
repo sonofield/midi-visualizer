@@ -1,0 +1,35 @@
+---
+description: This file describes the project
+globs: 
+alwaysApply: true
+---
+
+# Project
+
+This project is a musical synth UI. The user plugs in a MIDI device to play the synth. The played notes are reflected in the UI.
+
+## Stack
+- This is a Svelte Kit app
+- Typescript
+- Tailwind
+
+## Tools
+- The main musical UI element is a Rive artboard.
+- The synth is played with a soundfont. The soundfont is located here: https://hso6xk6uo0.ufs.sh/f/ab5FJrlC8mixwkurJ0X2DoeLrQmt3dPUVIzBuY72HbiNxKvJ
+
+## Theme
+- The background color should be #1A1A1D
+- The brightest font and action color should be #F3F0F0
+
+## Main features
+- The user should be able to start a session. When the session is started a drone sound from the soundfont should play in the background.
+- The user should be able to play a midi note when the session is started. The played note should reflect in the UI. It should make a sound from the soundfont.
+- The user should be able to choose from available midi devices.
+- The user should be able to choose the musical key they are in. An option for a random key for the session should be there as well.
+- The user should be able to resize the sound UI element. It is a circle in the center.
+- The user should be able to hide other UI items, other than the sound UI element (the circle).
+
+## Folder structure
+- There is only one route: [+page.svelte](mdc:src/routes/+page.svelte)
+- Create any controller services in src/lib/services folder. Export them in [index.ts](mdc:src/lib/index.ts) for easier access.
+- Create any svelte components in src/lib/components. Export them in [index.ts](mdc:src/lib/index.ts) for easier access.
