@@ -9,8 +9,10 @@ import {
 	type CurrentPresetService,
 	type CurrentVolumeService
 } from '$lib';
+import type { MidiHistory } from '$lib/types/midi-history';
 
 export class SynthService {
+	private static readonly RISE_TIME = 0.08;
 	private static readonly key = {};
 
 	public static initializeContext({
@@ -44,8 +46,8 @@ export class SynthService {
 	#melodyInputChannel?: Tone.Channel;
 	#droneInputChannel?: Tone.Channel;
 
-	#droneSynth?: Tone.MonoSynth;
-	#melodySynth?: Tone.PolySynth<Tone.MonoSynth> | Tone.MonoSynth;
+	public droneSynth?: Tone.MonoSynth;
+	public melodySynth?: Tone.PolySynth<Tone.MonoSynth> | Tone.MonoSynth;
 
 	#melodyReverb?: Tone.Reverb;
 	public get melodyReverb() {
@@ -65,7 +67,7 @@ export class SynthService {
 	}
 
 	public get isMono() {
-		return this.#melodySynth instanceof Tone.MonoSynth;
+		return this.melodySynth instanceof Tone.MonoSynth;
 	}
 
 	private initializeMasterChannel() {
@@ -119,20 +121,22 @@ export class SynthService {
 
 	private setDroneSynth() {
 		// Connect drone synth through the effects chain
-		this.#droneSynth = new Tone.MonoSynth({
+		this.droneSynth = new Tone.MonoSynth({
 			...SynthPreset.drone.config,
 			volume: this.currentVolumeService.currentDroneVolume
 		});
 
-		this.#droneSynth!.connect(this.#droneInputChannel!);
+		this.droneSynth!.connect(this.#droneInputChannel!);
 	}
 
+	#melodyGain?: Tone.Gain;
 	private setMelodySynth(presetId: string) {
 		const preset = SynthPreset.asList.find((p) => p.id === presetId);
 		if (!preset) return;
 
 		// If there's an existing synth, dispose of it
-		this.#melodySynth?.dispose();
+		this.melodySynth?.dispose();
+		this.#melodyGain?.dispose();
 		this.currentPresetService.setPreset(presetId);
 
 		const config = {
@@ -142,13 +146,15 @@ export class SynthService {
 
 		// Create new synth with the selected preset
 		if (preset.type === 'poly') {
-			this.#melodySynth = new Tone.PolySynth(Tone.MonoSynth, config);
+			this.melodySynth = new Tone.PolySynth(Tone.MonoSynth, config);
 		} else {
-			this.#melodySynth = new Tone.MonoSynth(config);
+			this.melodySynth = new Tone.MonoSynth(config);
 		}
 
+		this.#melodyGain = new Tone.Gain(1);
+
 		// Connect through filter then to effects for parallel processing
-		this.#melodySynth?.chain(this.#melodyInputChannel!);
+		this.melodySynth?.chain(this.#melodyGain, this.#melodyInputChannel!);
 	}
 
 	private midiToNote(midi: number): string {
@@ -170,11 +176,11 @@ export class SynthService {
 
 	private playDrone = (midi: number) => {
 		const note = this.midiToNote(midi);
-		this.#droneSynth?.triggerAttack(note);
+		this.droneSynth?.triggerAttack(note);
 	};
 
 	private stopDrone = () => {
-		this.#droneSynth?.triggerRelease();
+		this.droneSynth?.triggerRelease();
 	};
 
 	public playMidiNote = ({
@@ -185,17 +191,23 @@ export class SynthService {
 	}: {
 		midi: number;
 		velocity: number;
-		midiHistory: number[];
-		nextMidiHistory: number[];
+		midiHistory: MidiHistory[];
+		nextMidiHistory: MidiHistory[];
 	}) => {
 		const note = this.midiToNote(midi);
 
 		const isFirstNote = midiHistory.length === 0;
 
-		if (this.#melodySynth instanceof Tone.MonoSynth && !isFirstNote) {
-			this.#melodySynth?.setNote(note);
-		} else {
-			this.#melodySynth?.triggerAttack(note, Tone.now(), velocity);
+		if (this.melodySynth instanceof Tone.MonoSynth && !isFirstNote) {
+			this.melodySynth?.setNote(note);
+			this.#melodyGain?.gain.linearRampTo(velocity, SynthService.RISE_TIME);
+		} else if (this.melodySynth instanceof Tone.MonoSynth) {
+			this.#melodyGain?.set({
+				gain: velocity
+			});
+			this.melodySynth?.triggerAttack(note, Tone.now(), 1);
+		} else if (this.melodySynth instanceof Tone.PolySynth) {
+			this.melodySynth.triggerAttack(note, Tone.now(), velocity);
 		}
 	};
 
@@ -205,21 +217,23 @@ export class SynthService {
 		nextMidiHistory
 	}: {
 		midi: number;
-		midiHistory: number[];
-		nextMidiHistory: number[];
+		midiHistory: MidiHistory[];
+		nextMidiHistory: MidiHistory[];
 	}) => {
 		const note = this.midiToNote(midi);
 
 		const isLastNote = midiHistory.length === 1;
-		if (this.#melodySynth instanceof Tone.MonoSynth) {
+		if (this.melodySynth instanceof Tone.MonoSynth) {
 			if (isLastNote) {
-				this.#melodySynth.triggerRelease();
+				this.melodySynth.triggerRelease();
 			} else {
-				const lastNote = this.midiToNote(nextMidiHistory[nextMidiHistory.length - 1]);
-				this.#melodySynth.setNote(lastNote);
+				const lastMidi = nextMidiHistory[nextMidiHistory.length - 1];
+				const lastNote = this.midiToNote(lastMidi.midi);
+				this.melodySynth.setNote(lastNote);
+				this.#melodyGain?.gain.linearRampTo(lastMidi.velocity, SynthService.RISE_TIME);
 			}
-		} else if (this.#melodySynth instanceof Tone.PolySynth) {
-			this.#melodySynth.triggerRelease(note);
+		} else if (this.melodySynth instanceof Tone.PolySynth) {
+			this.melodySynth.triggerRelease(note);
 		}
 	};
 
@@ -229,27 +243,27 @@ export class SynthService {
 	};
 
 	private stopAllMelodyNotes() {
-		if (this.#melodySynth instanceof Tone.MonoSynth) {
-			this.#melodySynth.triggerRelease();
-		} else if (this.#melodySynth instanceof Tone.PolySynth) {
-			this.#melodySynth.releaseAll();
+		if (this.melodySynth instanceof Tone.MonoSynth) {
+			this.melodySynth.triggerRelease();
+		} else if (this.melodySynth instanceof Tone.PolySynth) {
+			this.melodySynth.releaseAll();
 		}
 	}
 
 	public configureMelodySynth = (options: Partial<Tone.SynthOptions>) => {
-		if (!this.#melodySynth) return;
+		if (!this.melodySynth) return;
 
-		const nextOptions = this.calculateNextSynthOptions(this.#melodySynth.get(), options);
+		const nextOptions = this.calculateNextSynthOptions(this.melodySynth.get(), options);
 
-		this.#melodySynth.set(nextOptions);
+		this.melodySynth.set(nextOptions);
 	};
 
 	public configureDroneSynth = (options: Partial<Tone.SynthOptions>) => {
-		if (!this.#droneSynth) return;
+		if (!this.droneSynth) return;
 
-		const nextOptions = this.calculateNextSynthOptions(this.#droneSynth.get(), options);
+		const nextOptions = this.calculateNextSynthOptions(this.droneSynth.get(), options);
 
-		this.#droneSynth.set(nextOptions);
+		this.droneSynth.set(nextOptions);
 	};
 
 	private calculateNextSynthOptions = (
@@ -274,14 +288,14 @@ export class SynthService {
 	};
 
 	public setDroneVolume = (volume: number) => {
-		this.#droneSynth?.set({
+		this.droneSynth?.set({
 			volume: volume
 		});
 		this.currentVolumeService.setDroneVolume(volume);
 	};
 
 	public setMelodyVolume = (volume: number) => {
-		this.#melodySynth?.set({
+		this.melodySynth?.set({
 			volume: volume
 		});
 		this.currentVolumeService.setMelodyVolume(volume);
@@ -341,25 +355,25 @@ export class SynthService {
 	};
 
 	public configureMelodyFilter = (options: Partial<Tone.FilterOptions>) => {
-		if (!this.#melodySynth) return;
+		if (!this.melodySynth) return;
 
 		const nextOptions = this.calculateNextFilterOptions(
-			this.#melodySynth.get().filter as any,
+			this.melodySynth.get().filter as any,
 			options
 		);
 
-		this.#melodySynth.set({ filter: nextOptions });
+		this.melodySynth.set({ filter: nextOptions });
 	};
 
 	public configureDroneFilter = (options: Partial<Tone.FilterOptions>) => {
-		if (!this.#droneSynth) return;
+		if (!this.droneSynth) return;
 
 		const nextOptions = this.calculateNextFilterOptions(
-			this.#droneSynth.get().filter as any,
+			this.droneSynth.get().filter as any,
 			options
 		);
 
-		this.#droneSynth.set({ filter: nextOptions });
+		this.droneSynth.set({ filter: nextOptions });
 	};
 
 	private calculateNextFilterOptions = (
@@ -375,25 +389,25 @@ export class SynthService {
 	};
 
 	public configureMelodyFilterEnvelope = (options: Partial<Tone.EnvelopeOptions>) => {
-		if (!this.#melodySynth) return;
+		if (!this.melodySynth) return;
 
 		const nextOptions = this.calculateNextFilterEnvelopeOptions(
-			this.#melodySynth.get().filterEnvelope as any,
+			this.melodySynth.get().filterEnvelope as any,
 			options
 		);
 
-		this.#melodySynth.set({ filterEnvelope: nextOptions });
+		this.melodySynth.set({ filterEnvelope: nextOptions });
 	};
 
 	public configureDroneFilterEnvelope = (options: Partial<Tone.EnvelopeOptions>) => {
-		if (!this.#droneSynth) return;
+		if (!this.droneSynth) return;
 
 		const nextOptions = this.calculateNextFilterEnvelopeOptions(
-			this.#droneSynth.get().filterEnvelope as any,
+			this.droneSynth.get().filterEnvelope as any,
 			options
 		);
 
-		this.#droneSynth.set({ filterEnvelope: nextOptions });
+		this.droneSynth.set({ filterEnvelope: nextOptions });
 	};
 
 	private calculateNextFilterEnvelopeOptions = (
@@ -406,6 +420,17 @@ export class SynthService {
 		};
 
 		return options;
+	};
+
+	public setMelodyVelocity = (velocity: number) => {
+		if (!this.melodySynth || !this.#melodyGain) return;
+
+		if (this.melodySynth instanceof Tone.MonoSynth) {
+			this.#melodyGain?.set({
+				gain: velocity
+			});
+		}
+		// PolySynth is not handled with mod
 	};
 
 	public dispose() {

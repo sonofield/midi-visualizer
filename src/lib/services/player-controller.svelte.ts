@@ -5,6 +5,7 @@ import {
 	MidiService,
 	NoteNameHelper
 } from '$lib';
+import type { MidiHistory } from '$lib/types/midi-history';
 import type { NoteName } from '$lib/types/note-name';
 import type { Octave } from '$lib/types/octave';
 import type { SynthConfig } from '$lib/types/synth-preset';
@@ -63,6 +64,8 @@ export class PlayerController {
 	) {
 		midiService.setOnMidiDown(this.playMidiNote);
 		midiService.setOnMidiUp(this.stopMidiNote);
+		midiService.setOnMidiModWheel(this.handleMidiModWheel);
+
 		circleService.setOnDegreeUp(this.onCircleDegreeTapUp);
 		circleService.setOnDegreeDown(this.onCircleDegreeTapDown);
 	}
@@ -132,14 +135,14 @@ export class PlayerController {
 		this.#midiHistory = [];
 	}
 
-	#midiHistory: number[] = [];
+	#midiHistory: MidiHistory[] = [];
 
 	public playMidiNote = (midi: number, velocity: number = 1) => {
 		if (!this.#isPlaying) return;
-		if (this.#midiHistory.includes(midi)) return;
+		if (this.#midiHistory.some((m) => m.midi === midi)) return;
 
 		const midiHistory = [...this.#midiHistory];
-		const nextMidiHistory = [...this.#midiHistory, midi];
+		const nextMidiHistory = [...this.#midiHistory, { midi, velocity }];
 		this.synthService.playMidiNote({ midi, velocity, midiHistory, nextMidiHistory });
 		this.#midiHistory = [...nextMidiHistory];
 
@@ -155,10 +158,10 @@ export class PlayerController {
 
 	public stopMidiNote = (midi: number) => {
 		if (!this.#isPlaying) return;
-		if (!this.#midiHistory.includes(midi)) return;
+		if (!this.#midiHistory.some((m) => m.midi === midi)) return;
 
 		const midiHistory = [...this.#midiHistory];
-		const nextMidiHistory = midiHistory.filter((n) => n !== midi);
+		const nextMidiHistory = midiHistory.filter((n) => n.midi !== midi);
 		this.synthService.stopMidiNote({ midi, midiHistory, nextMidiHistory });
 		this.#midiHistory = nextMidiHistory;
 
@@ -167,9 +170,13 @@ export class PlayerController {
 
 		if (this.synthService.isMono && this.#midiHistory.length > 0) {
 			const lastMidi = this.#midiHistory[this.#midiHistory.length - 1];
-			const index = DegreeHelper.getCOFIndexByKey(lastMidi, this.tonicService.currentKey);
+			const index = DegreeHelper.getCOFIndexByKey(lastMidi.midi, this.tonicService.currentKey);
 			this.circleService.highlightDegree(index);
 		}
+	};
+
+	public handleMidiModWheel = (velocity: number) => {
+		this.synthService.setMelodyVelocity(velocity);
 	};
 
 	public static readonly MAX_CIRCLE_SIZE = 600;

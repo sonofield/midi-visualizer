@@ -54,6 +54,11 @@ export class MidiService {
 		this.#onMidiUp = onMidiUp;
 	};
 
+	#onMidiModWheel?: (value: number) => void;
+	public setOnMidiModWheel = (onMidiModWheel: (value: number) => void) => {
+		this.#onMidiModWheel = onMidiModWheel;
+	};
+
 	public setSelectedDevice = (deviceId?: string) => {
 		if (!deviceId) {
 			return this.setAllDevices();
@@ -101,24 +106,29 @@ export class MidiService {
 	private onMIDIMessage = (event: MIDIMessageEvent) => {
 		if (!event.data || event.data.length < 3) return;
 
-		const [status, note, velocity] = event.data;
+		const [status, note, value] = event.data;
 
 		// Check if it's a note on or note off event
-		const isNoteOn = (status & 0xf0) === 0x90 && velocity > 0;
-		const isNoteOff = (status & 0xf0) === 0x80 || ((status & 0xf0) === 0x90 && velocity === 0);
+		const isNoteOn = (status & 0xf0) === 0x90 && value > 0;
+		const isNoteOff = (status & 0xf0) === 0x80 || ((status & 0xf0) === 0x90 && value === 0);
+		// Check if it's a mod wheel event
+		const isModWheel = status === 0xb0;
 
 		if (isNoteOn) {
-			this.#onMidiDown?.(note, this.normalizeVelocity(velocity));
+			this.#onMidiDown?.(note, this.normalizeVelocity(value));
 		} else if (isNoteOff) {
 			this.#onMidiUp?.(note);
+		} else if (isModWheel) {
+			this.#onMidiModWheel?.(this.normalizeVelocity(value));
 		}
 	};
 
 	private normalizeVelocity(value: number): number {
 		// Ensure input is within bounds
-		const clampedValue = Math.max(0, Math.min(127, value));
+		const normalized = value / 127;
+		const clampedValue = Math.max(0, Math.min(1, normalized));
 
 		// Convert to 0-1 range
-		return clampedValue / 127;
+		return clampedValue;
 	}
 }
