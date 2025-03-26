@@ -130,6 +130,17 @@ export class SynthService {
 	}
 
 	#melodyGain?: Tone.Gain;
+
+	#melodyGainValue = $state(1);
+	public get melodyGainValue() {
+		return this.#melodyGainValue;
+	}
+
+	#melodyGainTouched = $state(false);
+	public get melodyGainTouched() {
+		return this.#melodyGainTouched;
+	}
+
 	private setMelodySynth(presetId: string) {
 		const preset = SynthPreset.asList.find((p) => p.id === presetId);
 		if (!preset) return;
@@ -152,6 +163,8 @@ export class SynthService {
 		}
 
 		this.#melodyGain = new Tone.Gain(1);
+		this.#melodyGainValue = 1;
+		this.#melodyGainTouched = false;
 
 		// Connect through filter then to effects for parallel processing
 		this.melodySynth?.chain(this.#melodyGain, this.#melodyInputChannel!);
@@ -172,6 +185,12 @@ export class SynthService {
 
 	public stop = () => {
 		this.stopAll();
+		this.resetValues();
+	};
+
+	private resetValues = () => {
+		this.#melodyGainValue = 1;
+		this.#melodyGainTouched = false;
 	};
 
 	private playDrone = (midi: number) => {
@@ -200,11 +219,7 @@ export class SynthService {
 
 		if (this.melodySynth instanceof Tone.MonoSynth && !isFirstNote) {
 			this.melodySynth?.setNote(note);
-			this.#melodyGain?.gain.linearRampTo(velocity, SynthService.RISE_TIME);
 		} else if (this.melodySynth instanceof Tone.MonoSynth) {
-			this.#melodyGain?.set({
-				gain: velocity
-			});
 			this.melodySynth?.triggerAttack(note, Tone.now(), 1);
 		} else if (this.melodySynth instanceof Tone.PolySynth) {
 			this.melodySynth.triggerAttack(note, Tone.now(), velocity);
@@ -230,7 +245,6 @@ export class SynthService {
 				const lastMidi = nextMidiHistory[nextMidiHistory.length - 1];
 				const lastNote = this.midiToNote(lastMidi.midi);
 				this.melodySynth.setNote(lastNote);
-				this.#melodyGain?.gain.linearRampTo(lastMidi.velocity, SynthService.RISE_TIME);
 			}
 		} else if (this.melodySynth instanceof Tone.PolySynth) {
 			this.melodySynth.triggerRelease(note);
@@ -422,10 +436,12 @@ export class SynthService {
 		return options;
 	};
 
-	public setMelodyVelocity = (velocity: number) => {
+	public setMelodyGain = (velocity: number) => {
 		if (!this.melodySynth || !this.#melodyGain) return;
 
 		if (this.melodySynth instanceof Tone.MonoSynth) {
+			this.#melodyGainTouched = true;
+			this.#melodyGainValue = velocity;
 			this.#melodyGain?.set({
 				gain: velocity
 			});

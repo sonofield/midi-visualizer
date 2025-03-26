@@ -64,7 +64,7 @@ export class PlayerController {
 	) {
 		midiService.setOnMidiDown(this.playMidiNote);
 		midiService.setOnMidiUp(this.stopMidiNote);
-		midiService.setOnMidiModWheel(this.handleMidiModWheel);
+		midiService.setOnMidiModWheel(this.setMelodyGain);
 
 		circleService.setOnDegreeUp(this.onCircleDegreeTapUp);
 		circleService.setOnDegreeDown(this.onCircleDegreeTapDown);
@@ -175,9 +175,17 @@ export class PlayerController {
 		}
 	};
 
-	public handleMidiModWheel = (velocity: number) => {
-		this.synthService.setMelodyVelocity(velocity);
+	public setMelodyGain = (velocity: number) => {
+		this.synthService.setMelodyGain(velocity);
 	};
+
+	public get melodyGainValue() {
+		return this.synthService.melodyGainValue;
+	}
+
+	public get melodyGainTouched() {
+		return this.synthService.melodyGainTouched;
+	}
 
 	public static readonly MAX_CIRCLE_SIZE = 600;
 	public maxCircleSize = $state(PlayerController.MAX_CIRCLE_SIZE);

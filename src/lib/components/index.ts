@@ -13,6 +13,7 @@ export { default as PauseIcon } from './icons/PauseIcon.svelte';
 export { default as PlayIcon } from './icons/PlayIcon.svelte';
 export { default as ShuffleIcon } from './icons/ShuffleIcon.svelte';
 export { default as TuneIcon } from './icons/TuneIcon.svelte';
+export { default as MelodyGainDisplay } from './MelodyGainDisplay.svelte';
 export { default as ReverbConfiguration } from './ReverbConfiguration.svelte';
 export { default as SettingsButtonAdmin } from './SettingsButtonAdmin.svelte';
 export { default as SettingsButtonUser } from './SettingsButtonUser.svelte';

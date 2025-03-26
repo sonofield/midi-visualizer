@@ -6,6 +6,7 @@
 		CurrentKeyService,
 		CurrentOctaveService,
 		CurrentPresetService,
+		MelodyGainDisplay,
 		MidiService,
 		PlayerController,
 		SynthService
@@ -59,8 +60,9 @@
 		</main>
 	</div>
 
-	<footer class="fixed bottom-0 left-0 w-full px-4 py-2">
+	<footer class="fixed bottom-0 left-0 w-full items-center justify-center px-4 py-2">
 		<AppDownload />
+		<MelodyGainDisplay />
 	</footer>
 </div>
 
