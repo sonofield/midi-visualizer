@@ -7,6 +7,7 @@
 		{name}: {volume} db
 	</legend>
 	<input
+		id={name}
 		type="range"
 		value={volume}
 		onchange={onUpdateVolume}

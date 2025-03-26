@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { NoteNameHelper, PlayerController, ShuffleIcon } from '$lib';
+	import { NoteNameHelper, PlayerController, randomString, ShuffleIcon } from '$lib';
 
 	import { NoteName } from '$lib/types/note-name';
 
@@ -17,6 +17,8 @@
 	function handleRandomKey() {
 		playerController.setRandomKey();
 	}
+
+	const name = randomString();
 </script>
 
 <fieldset class="fieldset flex-1">
@@ -25,6 +27,7 @@
 	{/if}
 	<div class="flex flex-row items-center gap-2">
 		<select
+			id={name}
 			value={playerController.currentKey.name}
 			onchange={handleKeyChange}
 			class="select"

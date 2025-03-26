@@ -64,6 +64,7 @@
 			<fieldset class="fieldset">
 				<legend class="fieldset-legend">Synth Preset</legend>
 				<select
+					id="synth-preset"
 					value={playerController.currentPreset.id}
 					onchange={handlePresetChange}
 					class="select"
@@ -79,6 +80,7 @@
 			<fieldset class="fieldset">
 				<legend class="fieldset-legend">MIDI Device</legend>
 				<select
+					id="midi-device"
 					value={playerController.selectedMidiDevice?.id || null}
 					onchange={handleMidiDeviceChange}
 					class="select"
@@ -96,6 +98,7 @@
 			<fieldset class="fieldset">
 				<legend class="fieldset-legend">Drone Octave</legend>
 				<select
+					id="drone-octave"
 					value={playerController.currentDroneOctave.value}
 					onchange={handleDroneOctaveChange}
 					class="select"
@@ -121,6 +124,7 @@
 			<fieldset class="fieldset">
 				<legend class="fieldset-legend">Melody Octave (circle tapping only)</legend>
 				<select
+					id="melody-octave"
 					value={playerController.currentMelodyOctave.value}
 					onchange={handleMelodyOctaveChange}
 					class="select"
