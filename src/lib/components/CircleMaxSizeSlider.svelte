@@ -5,7 +5,7 @@
 
 	let innerWidth = $state(window.innerWidth);
 	let innerHeight = $state(window.innerHeight);
-	let minDimension = $derived(Math.round(Math.min(innerWidth, innerHeight)));
+	let minDimension = $derived(Math.round(Math.min(innerWidth, innerHeight) / 10) * 10);
 
 	function handleChange(event: Event) {
 		const input = event.target as HTMLInputElement;
