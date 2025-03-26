@@ -10,7 +10,14 @@
 	}
 </script>
 
-<fieldset class="fieldset">
-	<legend class="fieldset-label">Circle Size</legend>
-	<input class="range" type="range" min="100" max="2000" step="10" oninput={handleChange} />
+<fieldset class="fieldset w-48">
+	<legend class="fieldset-label">Circle Size ({playerController.maxCircleSize})</legend>
+	<input
+		class="range range-xs range-neutral"
+		type="range"
+		min="400"
+		max="2000"
+		step="10"
+		oninput={handleChange}
+	/>
 </fieldset>

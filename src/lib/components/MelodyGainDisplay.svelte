@@ -11,7 +11,7 @@
 </script>
 
 <div hidden={!playerController.melodyGainTouched} class="flex items-center justify-center py-2">
-	<fieldset class="fieldset w-64">
+	<fieldset class="fieldset w-48">
 		<legend class="fieldset-label">Melody Gain</legend>
 		<input
 			id="melody-gain-display"
