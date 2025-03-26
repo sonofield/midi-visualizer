@@ -3,6 +3,10 @@
 
 	const playerController = PlayerController.getContext();
 
+	let innerWidth = $state(window.innerWidth);
+	let innerHeight = $state(window.innerHeight);
+	let minDimension = $derived(Math.round(Math.min(innerWidth, innerHeight)));
+
 	function handleChange(event: Event) {
 		const input = event.target as HTMLInputElement;
 		const value = parseInt(input.value);
@@ -10,13 +14,15 @@
 	}
 </script>
 
+<svelte:window bind:innerWidth bind:innerHeight />
+
 <fieldset class="fieldset w-48">
 	<legend class="fieldset-label">Circle Size ({playerController.maxCircleSize})</legend>
 	<input
 		class="range range-xs range-neutral"
 		type="range"
 		min="400"
-		max="2000"
+		max={minDimension}
 		step="10"
 		oninput={handleChange}
 	/>
